@@ -2,22 +2,21 @@ global:
   scrape_interval: 120s
 
 scrape_configs:
-
   # FastAPI Prometheus metrics
   - job_name: "fastapi"
+    metrics_path: "/metrics"
     static_configs:
       - targets:
-          - "fastapi:8001"
+          - "fastapipostgres-app-service.fastapipostgres-app.svc.cluster.local:8001"
 
-  # Check /employees/ availability
-  - job_name: "dept-api"
+  # Check /employees/ availability using Blackbox Exporter
+  - job_name: "employees-api"
     metrics_path: "/probe"
     params:
       module: [http_2xx]
-
     static_configs:
       - targets:
-          - "http://fastapi:8001/dept/"
+          - "http://fastapipostgres-app-service.fastapipostgres-app.svc.cluster.local:8001/dept/"
 
     relabel_configs:
       - source_labels: [__address__]
@@ -28,11 +27,3 @@ scrape_configs:
 
       - target_label: __address__
         replacement: "blackbox-exporter:9115"
-
-# global:
-#   scrape_interval: 5s
-
-# scrape_configs:
-#   - job_name: "fastapi"
-#     static_configs:
-#       - targets: ["fastapi:8001"]
