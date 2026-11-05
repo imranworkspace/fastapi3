@@ -1,0 +1,41 @@
+# path parameter
+@router.post('/bulk',response_model=list[DeptCreate],status_code=status.HTTP_201_CREATED)
+
+# query parameter
+@router.get('/users',status_code=status.HTTP_200_OK)
+async def getage(age:int):
+    return {'age':age}
+
+# 127.0.0.0:8000/users?age=23
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+select e.employee_name,
+       m.employee_name as Manager_Name
+       from selfj e 
+       left join selfj m 
+       on e.manager_id=m.id;
+
+
+# find second highest salary 
+
+select max(salary) from emp where salary<(select max(salary) from emp);
+
+select *from emp order by salary desc limit 1 offset 1;
+select *from emp order by salary desc 1,1;
+
+select *from(
+    select e.*,DENSE_RANK() over(order by salary desc) as salary_rank from emp as e
+)emp where salary_rank=2;

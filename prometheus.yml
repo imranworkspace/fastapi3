@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 120s
+
+scrape_configs:
+
+  # FastAPI Prometheus metrics
+  - job_name: "fastapi"
+    static_configs:
+      - targets:
+          - "fastapi:8001"
+
+  # Check /employees/ availability
+  - job_name: "dept-api"
+    metrics_path: "/probe"
+    params:
+      module: [http_2xx]
+
+    static_configs:
+      - targets:
+          - "http://fastapi:8001/dept/"
+
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      - source_labels: [__param_target]
+        target_label: instance
+
+      - target_label: __address__
+        replacement: "blackbox-exporter:9115"
+
+# global:
+#   scrape_interval: 5s
+
+# scrape_configs:
+#   - job_name: "fastapi"
+#     static_configs:
+#       - targets: ["fastapi:8001"]

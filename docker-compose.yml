@@ -1,0 +1,193 @@
+
+services:
+
+  # ==============================
+  # FASTAPI APPLICATION
+  # ==============================
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: fastapi3
+
+    ports:
+      - "8001:8001"
+
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/zdb
+      REDIS_URL: redis://redis:6379/0
+
+      # OpenTelemetry configuration
+      OTEL_SERVICE_NAME: fastapi-crud
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+
+    volumes:
+      - .:/fastapi3
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      jaeger:
+        condition: service_started
+
+    restart: unless-stopped
+
+    command: ["/fastapi3/entrypoint.sh"]
+
+
+  # ==============================
+  # POSTGRESQL DATABASE
+  # ==============================
+  postgres:
+    image: postgres:17
+
+    container_name: postgres_single_branch
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: zdb
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d zdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    restart: unless-stopped
+
+
+  # ==============================
+  # REDIS CACHE
+  # ==============================
+  redis:
+    image: redis:7
+
+    container_name: redis_single_branch
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    restart: unless-stopped
+
+
+  # ==============================
+  # PROMETHEUS
+  # ==============================
+  prometheus:
+    image: prom/prometheus:latest
+
+    container_name: prometheus_single_branch
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+    depends_on:
+      - fastapi
+      - blackbox-exporter
+
+    restart: unless-stopped
+
+
+  # ==============================
+  # BLACKBOX EXPORTER
+  # ==============================
+  blackbox-exporter:
+    image: prom/blackbox-exporter
+
+    container_name: blackbox-exporter_single_branch
+
+    ports:
+      - "9115:9115"
+
+    restart: unless-stopped
+
+
+  # ==============================
+  # GRAFANA DASHBOARD
+  # ==============================
+  grafana:
+    image: grafana/grafana:9.0.4
+
+    container_name: grafana_single_branch
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+    depends_on:
+      - prometheus
+
+    restart: unless-stopped
+
+
+  # ==============================
+  # JAEGER APM
+  # ==============================
+  jaeger:
+    image: jaegertracing/jaeger:2.13.0
+
+    container_name: jaeger
+
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+
+    restart: unless-stopped
+
+
+  # ==============================
+  # LOCUST LOAD TESTING
+  # ==============================
+  locust:
+    image: locustio/locust:2.46.5
+
+    container_name: locust_single_branch
+
+    ports:
+      - "8089:8089"
+
+    volumes:
+      - ./locustfile.py:/mnt/locust/locustfile.py
+
+    working_dir: /mnt/locust
+
+    command:
+      - -f
+      - locustfile.py
+      - --host=http://fastapi:8001
+
+    depends_on:
+      - fastapi
+
+    restart: unless-stopped
+
+
+# ==============================
+# PERSISTENT VOLUMES
+# ==============================
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
