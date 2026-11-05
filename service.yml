@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapipostgres-app-service
+  namespace: fastapipostgres-app
+
+spec:
+  selector:
+    app: fastapipostgres-app
+
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+
+  type: ClusterIP
