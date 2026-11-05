@@ -8,7 +8,8 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
+# prometheus
+from prometheus_fastapi_instrumentator import Instrumentator
 app = FastAPI()
 app.include_router(dept_router)
 resource = Resource.create({
@@ -29,3 +30,4 @@ provider.add_span_processor(
 trace.set_tracer_provider(provider)
 
 FastAPIInstrumentor.instrument_app(app)
+Instrumentator().instrument(app).expose(app)
